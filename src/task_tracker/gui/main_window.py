@@ -348,7 +348,18 @@ class TaskTracker:
 
     # View
     def show_statistics_window(self):
-        self.statistics_window = StatisticsWindow(self.root)
+        """Display the statistics window."""
+        total_time_per_task = dict()
+        for task in self.tasks:
+            data = self.db.fetch_data(FETCH_ELAPSED_TIME.format(task))
+            total_time_per_task[task.strip()] = sum(
+                [float(time) for name in data for time in name]
+            )
+        self.statistics_window = StatisticsWindow(
+            self.root,
+            total_time_per_task,
+        )
+        self.statistics_window.focus_set()
         self.statistics_window.grab_set()
 
     # Edit, Add, Delete

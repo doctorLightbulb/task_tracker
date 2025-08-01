@@ -3,6 +3,8 @@
 import sqlite3
 from pathlib import Path
 
+# SETUP QUERIES
+
 CREATE_TABLE_QUERY = """
     CREATE TABLE IF NOT EXISTS tasks(
         task,
@@ -20,6 +22,8 @@ CREATE_SESSION_TABLE_QUERY = """
     )
 """
 
+# COMMIT QUERIES
+
 COMMIT_TASK_QUERY = """
     INSERT INTO tasks VALUES(?, ?, ?, ?)
 """
@@ -34,6 +38,8 @@ UPDATE_STATE_QUERY = """
         y = {},
         task = '{}'
 """
+
+# FETCH QUERIES
 
 FETCH_TASK = """
     SELECT task
