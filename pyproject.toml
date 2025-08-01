@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75.3.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "task_tracker"
+authors = [{ name = "Joshua Nolan", email = "joshua@joshuanolan.com" }]
+requires-python = ">=3.9"
+dependencies = []
+dynamic = ["version"]
+
+
+[project.optional-dependencies]
+dev = ["pyinstaller"]
+
+[project.scripts]
+task = "task_tracker.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "task_tracker.__version__" }

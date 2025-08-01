@@ -1,0 +1,7 @@
+A simple time-tracker app built with Tkinter.
+
+The idea is to build an app that tracks the time spent on a given task. There should be a category with sub-tasks. For example, when doing work for my eldest brother's business, I have to be able to specify the business' name and the task for that business. 
+
+Perhaps tabs could be used for each given category.
+
+Need to track how much time per day, per week, per month and total time worked. A simple spreadsheet could be used, but why not automate the process?
