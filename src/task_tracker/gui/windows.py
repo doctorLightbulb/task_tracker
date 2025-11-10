@@ -22,15 +22,6 @@ class StatisticsWindow(tk.Toplevel):
         )
         screen_label.pack(side=tk.TOP, fill=tk.X, expand=True)
 
-        label_frame = tk.Frame(self, bg="white", padx=20)
-        label_frame.pack(fill=tk.BOTH, expand=True)
-
-        task_label = tk.Label(label_frame, text="TASK", bg="white")
-        task_label.pack(side=tk.LEFT)
-
-        time_label = tk.Label(label_frame, text="TIME", bg="white")
-        time_label.pack(side=tk.RIGHT)
-
         self.frame = tk.Frame(self)
         self.frame.pack(
             side=tk.BOTTOM,
@@ -46,24 +37,21 @@ class StatisticsWindow(tk.Toplevel):
         """Dynamically populate the widgets based on the number of tasks
         in `self.data`.
         """
-        time_font = ("Times New Roman", 12, "bold")
-        task_font = ("Times New Roman", 12)
-        for index, task in enumerate(self.data.keys()):
-            task_label = tk.Label(
-                self.frame,
+        treeview = ttk.Treeview(self.frame, columns=("Total"))
+        treeview.heading("#0", text="Task")
+        treeview.heading("Total", text="Time")
+
+        for task in self.data.keys():
+            treeview.insert(
+                "",
+                tk.END,
                 text=task,
-                justify=tk.LEFT,
-                font=task_font,
+                values=(timestamp(self.data[task]),),
             )
-            time_label = tk.Label(
-                self.frame,
-                text=str(timestamp(self.data[task])),
-                font=time_font,
-            )
-            task_label.grid(column=0, row=index + 1)
-            time_label.grid(column=1, row=index + 1)
-            self.frame.grid_rowconfigure(index + 1, weight=2)
-            self.frame.grid_rowconfigure(index + 2, weight=1)
+
+        treeview.columnconfigure(0, weight=2)
+        treeview.columnconfigure(1, weight=0)
+        treeview.pack(fill=tk.BOTH, expand=True)
 
 
 def timestamp(seconds: int | float) -> str:
