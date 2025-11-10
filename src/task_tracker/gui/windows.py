@@ -9,10 +9,10 @@ class StatisticsWindow(tk.Toplevel):
         self.data = data
         self.title("Statistics")
 
-        self.initialize_window()
+        self._initialize_window()
 
-    def initialize_window(self):
-        """Create the window widgets."""
+    def _initialize_window(self):
+        """Creates the window widgets."""
         screen_label = tk.Label(
             self,
             text="Time Spent per Task",
@@ -34,7 +34,8 @@ class StatisticsWindow(tk.Toplevel):
         self.load_fields()
 
     def load_fields(self):
-        """Dynamically populate the widgets based on the number of tasks
+        """
+        Dynamically populates the widgets based on the number of tasks
         in `self.data`.
         """
         treeview = ttk.Treeview(self.frame, columns=("Total"))
@@ -55,7 +56,8 @@ class StatisticsWindow(tk.Toplevel):
 
 
 def timestamp(seconds: int | float) -> str:
-    """Take seconds in the form `18221.51687` and return a value
+    """
+    Takes seconds in the form `18221.51687` and returns a value
     of the form `05:03:42`.
     """
     (hours, seconds) = divmod(seconds, 3600)
