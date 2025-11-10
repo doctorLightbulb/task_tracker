@@ -7,6 +7,7 @@ import logging
 import tkinter as tk
 from datetime import datetime
 from tkinter import filedialog, simpledialog, ttk
+from typing import List, Tuple
 
 from task_tracker.database import (
     COMMIT_STATE_QUERY,
@@ -31,26 +32,26 @@ class TaskTracker:
 
     def __init__(self, root: tk.Tk, database, icons) -> None:
 
-        # Initial values
+        # Initial values:
         self.timer = tk.StringVar(value=DEFAULT_TIME)
         self.button_text = tk.StringVar(value="Start")
         self.task = tk.StringVar(value="")
-        self.tasks: set = set()
+        self.tasks: List[str] = []
         self.date = self.get_date()
         self.start_time = None
         self.stop_time = None
         self.elapsed_time = None
 
-        # Application variables
-        self.running = False
-        self.counter = 0
+        # Application variables:
+        self.timer_is_running = False
+        self.counter = 0  # the timer's time in seconds.
 
-        # Root definitions
+        # Root definitions:
         self.root = root
         self.root.title("Task Tracker")
         self.root.protocol("WM_DELETE_WINDOW", self.exit)
 
-        # Load window's state
+        # Load window's state:
         self.db = database
         self.tasks = self.load_existing_task_names()
 
@@ -58,14 +59,16 @@ class TaskTracker:
             f"Database path {self.db.db_path!r} exists: {self.db.db_path.exists()}"
         )
 
-        # Window size and placement
+        # Window size and placement:
         window_width = 304
         window_height = 208
         x, y = self.set_window_state(window_width, window_height)
         self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
-        # Other
+        # Other:
         self.icons = icons
+
+        # Task autofill:
         self.task.trace_add(
             "write",
             lambda name, index, mode, task=self.task: self.task_callback(),
@@ -75,7 +78,7 @@ class TaskTracker:
         self.init_gui()
 
     def bindings(self):
-        """Add bindings to menu items and buttons."""
+        """Adds bindings to menu items and buttons."""
         self.root.bind("<Alt-i>", self.import_tasks)
         self.root.bind("<Alt-e>", self.export_tasks)
         self.root.bind("<Control-e>", self.edit_entry)
@@ -85,7 +88,7 @@ class TaskTracker:
         self.root.bind("<Escape>", self.exit)
 
     def init_gui(self):
-        """Paint the widgets to the window."""
+        """Paints the widgets to the window."""
 
         # Main frame
         self.frame = ttk.Frame(self.root)
@@ -123,7 +126,7 @@ class TaskTracker:
 
     # GUI assistant methods
     def create_menubar(self):
-        """Create the main window's menubar."""
+        """Creates the main window's menubar."""
 
         menubar = tk.Menu(self.root, tearoff=False)
         self.root.config(menu=menubar)
@@ -204,7 +207,7 @@ class TaskTracker:
         )
 
     def load_window_icons(self) -> None:
-        """Load all main window icons."""
+        """Loads all main window icons."""
         window_icon_path = str(self.icons.joinpath("timer.png"))
 
         export_icon_path = str(self.icons.joinpath("image-export.png"))
@@ -224,8 +227,8 @@ class TaskTracker:
         self.delete_icon = tk.PhotoImage(file=minus_icon_path)
         self.clear_database_icon = tk.PhotoImage(file=database_icon_path)
 
-    def task_callback(self):
-        """Autofill the task's name as user types corresponding letters."""
+    def task_callback(self) -> None:
+        """Autofills the task's name as user types corresponding letters."""
         value = self.task.get().lower()
         task_length_count = len(value)
         max_match_length = 5
@@ -239,9 +242,9 @@ class TaskTracker:
             else:
                 self.set_timer()
 
-    def update(self):
-        """Update the timer once per second."""
-        if self.running:
+    def update(self) -> None:
+        """Updates the timer once per second."""
+        if self.timer_is_running:
 
             # Timer
             time = self.format_stopwatch_time(self.counter)
@@ -250,9 +253,15 @@ class TaskTracker:
             self.counter += 1
 
     def execute_timer(self, event=None):
-        """Start the timer if it isn't running; stop the timer otherwise."""
-        if not self.running:
-            self.running = True
+        """
+        Starts the timer if it isn't running; stops it otherwise.
+
+        This method updates the timer when it is running, and it
+        calls `self.commit_session()` when it stops.
+        """
+        self.timer_is_running = not self.timer_is_running
+
+        if self.timer_is_running:
             self.start_time = datetime.now()
 
             # GUI state
@@ -261,7 +270,6 @@ class TaskTracker:
 
             self.update()
         else:
-            self.running = False
             self.stop_time = datetime.now()
             self.elapsed_time = self.calculate_elapsed_time(
                 self.start_time,
@@ -275,14 +283,27 @@ class TaskTracker:
             self.commit_session()
 
     # Load and save
-    def load_existing_task_names(self) -> set:
+    def load_existing_task_names(self) -> List[str]:
+        """
+        Loads existing task names and returns them in reverse alphabetical order.
+        """
         raw_task_names = self.db.fetch_data(FETCH_TASK)
-        task_names = set(name for i in raw_task_names for name in i)
+        task_names = sorted(
+            set(name.strip() for i in raw_task_names for name in i), reverse=True
+        )
         logging.info(f"Task names: {','.join(task_names)}")
         return task_names
 
     def commit_session(self):
-        """Commit a session to the database."""
+        """
+        Commits a session to the database.
+
+        This includes:
+        - the task's name
+        - the start time
+        - the stop time and
+        - the elapsed time
+        """
         task = self.task.get().strip()
         start = str(self.start_time)
         end = str(self.stop_time)
@@ -298,8 +319,10 @@ class TaskTracker:
 
         logging.info(f"Session data: {' '.join(session)}")
 
-    def set_window_state(self, window_width, window_height):
-        """Load the window state if a previous state has been saved."""
+    def set_window_state(
+        self, window_width: int, window_height: int
+    ) -> Tuple[int, int]:
+        """Loads the window state if a previous state has been saved."""
         raw_state = self.db.fetch_data(FETCH_STATE)
         previous_state = list(name for i in raw_state for name in i)
 
@@ -316,9 +339,11 @@ class TaskTracker:
             return x, y
         return x, y
 
-    def commit_window_state(self):
-        """Save the state of the window. This method
-        commits the window's current `x` and `y` coordinates,
+    def commit_window_state(self) -> None:
+        """
+        Saves the state of the window.
+
+        This method commits the window's current `x` and `y` coordinates,
         as well as the task on its display.
         """
         x, y = self.root.geometry().split("+")[1:]
@@ -331,8 +356,8 @@ class TaskTracker:
         else:
             self.db.update(UPDATE_STATE_QUERY.format(*window_state))
 
-    def set_timer(self):
-        """Load existing time for a task."""
+    def set_timer(self) -> None:
+        """Loads existing time for a task."""
         raw_time = self.db.fetch_data(
             FETCH_DAYS_TIME.format(self.task.get(), self.date),
         )
@@ -403,7 +428,7 @@ class TaskTracker:
 
         # Save the time if the window is closed
         # when the timer is running.
-        if self.running:
+        if self.timer_is_running:
             self.execute_timer()
 
         self.root.destroy()
