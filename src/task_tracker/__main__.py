@@ -24,7 +24,7 @@ def main():
         database = Database(database_path)
     except Exception as e:
         messagebox.showerror(
-            "Error", f"An error has occurred when loading the database:\n{e}"
+            "Error", f"An error has occurred while loading the database:\n{e}"
         )
         sys.exit(1)
 
