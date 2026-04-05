@@ -42,19 +42,19 @@ UPDATE_STATE_QUERY = """
 # FETCH QUERIES
 
 FETCH_TASK = """
-    SELECT task
+    SELECT DISTINCT task
     FROM tasks
-    ORDER BY task
+    ORDER BY stopped
 """
 
 FETCH_DAYS_TIME = """
-    SELECT elapsed
+    SELECT SUM(elapsed)
     FROM tasks
     WHERE task = '{}' AND started LIKE "%{}%"
 """
 
 FETCH_ELAPSED_TIME = """
-    SELECT elapsed
+    SELECT SUM(elapsed)
     FROM tasks
     WHERE task = '{}'
 """
@@ -72,20 +72,11 @@ FETCH_STATE = """
 
 
 class Database:
-    """A class for committing data to and fetching data from a SQLite3
-    database.
-    """
+    """Commits data to and fetches data from a SQLite3 database."""
 
     def __init__(self, path):
         self.db_path = Path(path)
-
-        database_exists = self.db_path.exists()
-        database_dir_exists = self.db_path.parent.parent.exists()
-
-        if not database_exists and database_dir_exists:
-            self.db_path.parent.mkdir(exist_ok=True)
-            self.create_empty_table(CREATE_TABLE_QUERY)
-            self.create_empty_table(CREATE_SESSION_TABLE_QUERY)
+        self.cursor = sqlite3.connect(self.db_path).cursor()
 
     @property
     def db_path(self):
@@ -95,39 +86,46 @@ class Database:
     def db_path(self, path):
         self._db_path = path
 
+    def initialize_database(self):
+        """Creates the database at the specified path if it doesn't exist."""
+        database_exists = self.db_path.exists()
+        database_dir_exists = self.db_path.parent.parent.exists()
+
+        if not database_exists and database_dir_exists:
+            self.db_path.parent.mkdir(exist_ok=True)
+            self.create_empty_table(CREATE_TABLE_QUERY)
+            self.create_empty_table(CREATE_SESSION_TABLE_QUERY)
+
     def create_empty_table(self, query: str):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(query)
+        """Creates a table with the query."""
+        self.cursor.execute(query)
+        self.cursor.connection.commit()
 
     def commit(self, query, data):
-        """Commit data to the selected database."""
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(query, data)
-            connection.commit()
+        """Commits data to the selected database."""
+        self.cursor.execute(query, data)
+        self.cursor.connection.commit()
 
     def commit_many(self, query, data):
-        """Commit data to the selected database."""
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.executemany(query, data)
+        """Commits data to the selected database."""
+        self.cursor.executemany(query, data)
+        self.cursor.connection.commit()
 
     def update(self, query):
         """Commit data to the selected database."""
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            cursor.execute(query)
-            connection.commit()
+        self.cursor.execute(query)
+        self.cursor.connection.commit()
 
     def fetch_data(self, query):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            results = cursor.execute(query)
-            return results.fetchall()
+        """Returns a list of results."""
+        results = self.cursor.execute(query)
+        return results.fetchall()
 
-    def find_matches(self, query, word):
-        with sqlite3.connect(self.db_path) as connection:
-            cursor = connection.cursor()
-            results = cursor.execute(query.format(word))
-            return results.fetchall()
+    def fetchone(self, query: str):
+        """Returns a single result."""
+        results = self.cursor.execute(query)
+        return results.fetchone()
+
+    def close_database(self):
+        """Closes the database connection."""
+        self.cursor.connection.close()
