@@ -1,5 +1,5 @@
-"""A module containing the TaskTracker class, the main window to the
-application.
+"""
+Contains the TaskTracker class, the main window to the application.
 """
 
 import csv
@@ -18,8 +18,10 @@ from task_tracker.database import (
     FETCH_STATE,
     FETCH_TASK,
     UPDATE_STATE_QUERY,
+    Database,
 )
 from task_tracker.gui.windows import StatisticsWindow
+from task_tracker.helpers import timestamp
 
 DEFAULT_TIME = "00:00:00"
 
@@ -30,17 +32,19 @@ logging.basicConfig(level=logging.INFO)
 class TaskTracker:
     """The main window to Task Tracker."""
 
-    def __init__(self, root: tk.Tk, database, icons) -> None:
+    def __init__(self, root: tk.Tk, database: Database, icons) -> None:
 
         # Initial values:
         self.timer = tk.StringVar(value=DEFAULT_TIME)
         self.button_text = tk.StringVar(value="Start")
         self.task = tk.StringVar(value="")
+
         self.tasks: List[str] = []
-        self.date = self.get_date()
         self.start_time = None
         self.stop_time = None
         self.elapsed_time = None
+
+        self.date = self.get_date()
 
         # Application variables:
         self.timer_is_running = False
@@ -247,7 +251,7 @@ class TaskTracker:
         if self.timer_is_running:
 
             # Timer
-            time = self.format_stopwatch_time(self.counter)
+            time = timestamp(self.counter)
             self.timer.set(time)
             self.root.after(1000, self.update)
             self.counter += 1
@@ -288,9 +292,7 @@ class TaskTracker:
         Loads existing task names and returns them in reverse alphabetical order.
         """
         raw_task_names = self.db.fetch_data(FETCH_TASK)
-        task_names = sorted(
-            set(name.strip() for i in raw_task_names for name in i), reverse=True
-        )
+        task_names = [name.strip() for i in raw_task_names for name in i]
         logging.info(f"Task names: {','.join(task_names)}")
         return task_names
 
@@ -357,29 +359,35 @@ class TaskTracker:
             self.db.update(UPDATE_STATE_QUERY.format(*window_state))
 
     def set_timer(self) -> None:
-        """Loads existing time for a task."""
-        raw_time = self.db.fetch_data(
+        """
+        Loads the existing time for a task.
+        Assigns the default time `(00:00:00)` otherwise.
+        """
+        raw_seconds = self.db.fetchone(
             FETCH_DAYS_TIME.format(self.task.get(), self.date),
         )
-        duration = sum(list(float(seconds) for i in raw_time for seconds in i))
-        if duration:
-            self.timer.set(self.format_stopwatch_time(duration))
-            self.counter = int(duration)
+        # Assign the default time:
+        if isinstance(None, type(raw_seconds[0])):
+            self.timer.set(DEFAULT_TIME)
+            self.counter = 0
             return
-        self.timer.set(DEFAULT_TIME)
-        self.counter = 0
+
+        # Assign the existing time:
+        duration = float(raw_seconds[0])
+        self.timer.set(timestamp(duration))
+        self.counter = int(duration)
+        return
 
     # MENUBAR COMMANDS
 
     # View
     def show_statistics_window(self):
-        """Display the statistics window."""
+        """Displays the statistics window."""
         total_time_per_task = dict()
-        for task in self.tasks:
-            data = self.db.fetch_data(FETCH_ELAPSED_TIME.format(task))
-            total_time_per_task[task.strip()] = sum(
-                [float(time) for name in data for time in name]
-            )
+        for task in sorted(self.tasks):
+            data = self.db.fetchone(FETCH_ELAPSED_TIME.format(task))
+            total_time_per_task[task.strip()] = float(data[0])
+
         self.statistics_window = StatisticsWindow(
             self.root,
             total_time_per_task,
@@ -402,7 +410,7 @@ class TaskTracker:
 
     # Exports and imports
     def export_tasks(self, event=None):
-        """Export tasks to `.csv` format."""
+        """Exports tasks to `.csv` format."""
         file_path = filedialog.asksaveasfile(
             defaultextension=".csv", filetypes=[("CSV", ".csv")]
         )
@@ -412,8 +420,10 @@ class TaskTracker:
             self.export_as_csv(file_path, data)
 
     def import_tasks(self, event=None):
-        """Import an existing `.csv` file with headers in the form:
-        `task, started, stopped, elapsed`."""
+        """
+        Imports an existing `.csv` file with headers in the form:
+        `task, started, stopped, elapsed`.
+        """
         file_path = filedialog.askopenfile(
             defaultextension=".csv", filetypes=[("CSV", ".csv")]
         )
@@ -421,8 +431,10 @@ class TaskTracker:
             self.import_csv(file_path)
 
     def exit(self, event=None):
-        """Commit window position and state, save the time if
-        the timer is running, then exit.
+        """
+        Commits window position and state.
+
+        Saves the time if the timer is running, then exits.
         """
         self.commit_window_state()
 
@@ -431,41 +443,32 @@ class TaskTracker:
         if self.timer_is_running:
             self.execute_timer()
 
+        self.db.close_database()
         self.root.destroy()
 
     # HELPER METHODS
 
     @staticmethod
-    def calculate_elapsed_time(start_time, stop_time):
-        """Calculate elapsed time in seconds."""
+    def calculate_elapsed_time(start_time: int | float, stop_time: int | float):
+        """Calculates elapsed time in seconds."""
         return stop_time - start_time
 
     @staticmethod
     def get_date() -> str:
-        """Return the current date without the time."""
+        """Returns the current date without the time."""
         current_date = str(datetime.now()).split()[:1][0]
         return current_date
 
     @staticmethod
-    def format_stopwatch_time(seconds: int | float) -> str:
-        """Format stopwatch in the form: `hh:mm:ss`."""
-        # Reset at a maximum of 99 hours.
-        hours = int((seconds // 3600) % 100)
-        minutes = int((seconds % 3600) // 60)
-        secs = int(seconds % 60)
-
-        return f"{hours:02}:{minutes:02}:{secs:02}"
-
-    @staticmethod
     def export_as_csv(file_name, data):
-        """Export all tasks as a `.csv` file."""
+        """Exports all tasks as a `.csv` file."""
         with open(file_name.name, "w") as csv_file:
             writer = csv.writer(csv_file, lineterminator="\n")
             writer.writerow(["Task", "Started", "Stopped", "Total Time"])
             writer.writerows(data)
 
     def import_csv(self, file_path):
-        """Import a `.csv` file with columns: `task, started, stopped, elapsed`."""
+        """Imports a `.csv` file with columns: `task, started, stopped, elapsed`."""
         with open(file_path.name, "r") as csv_file:
             reader = csv.reader(csv_file)
             next(reader)  # Skip headers
