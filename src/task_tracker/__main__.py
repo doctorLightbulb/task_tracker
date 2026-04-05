@@ -22,6 +22,7 @@ def main():
 
     try:
         database = Database(database_path)
+        database.initialize_database()
     except Exception as e:
         messagebox.showerror(
             "Error", f"An error has occurred while loading the database:\n{e}"
