@@ -29,10 +29,11 @@ DEFAULT_TIME = "00:00:00"
 logging.basicConfig(level=logging.INFO)
 
 
-class TaskTracker:
+class TaskTracker(tk.Tk):
     """The main window to Task Tracker."""
 
-    def __init__(self, root: tk.Tk, database: Database, icons) -> None:
+    def __init__(self, database: Database, icons) -> None:
+        super().__init__()
 
         # Initial values:
         self.timer = tk.StringVar(value=DEFAULT_TIME)
@@ -51,9 +52,8 @@ class TaskTracker:
         self.counter = 0  # the timer's time in seconds.
 
         # Root definitions:
-        self.root = root
-        self.root.title("Task Tracker")
-        self.root.protocol("WM_DELETE_WINDOW", self.exit)
+        self.title("Task Tracker")
+        self.protocol("WM_DELETE_WINDOW", self.exit)
 
         # Load window's state:
         self.db = database
@@ -67,7 +67,7 @@ class TaskTracker:
         window_width = 304
         window_height = 208
         x, y = self.set_window_state(window_width, window_height)
-        self.root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
         # Other:
         self.icons = icons
@@ -83,23 +83,23 @@ class TaskTracker:
 
     def bindings(self):
         """Adds bindings to menu items and buttons."""
-        self.root.bind("<Alt-i>", self.import_tasks)
-        self.root.bind("<Alt-e>", self.export_tasks)
-        self.root.bind("<Control-e>", self.edit_entry)
-        self.root.bind("<Control-a>", self.add_entry)
-        self.root.bind("<Control-d>", self.delete_entry)
-        self.root.bind("<Return>", self.execute_timer)
-        self.root.bind("<Escape>", self.exit)
+        self.bind("<Alt-i>", self.import_tasks)
+        self.bind("<Alt-e>", self.export_tasks)
+        self.bind("<Control-e>", self.edit_entry)
+        self.bind("<Control-a>", self.add_entry)
+        self.bind("<Control-d>", self.delete_entry)
+        self.bind("<Return>", self.execute_timer)
+        self.bind("<Escape>", self.exit)
 
     def init_gui(self):
         """Paints the widgets to the window."""
 
         # Main frame
-        self.frame = ttk.Frame(self.root)
+        self.frame = ttk.Frame(self)
         self.frame.pack(fill="both", pady=10, padx=10)
 
         self.load_window_icons()
-        self.root.iconphoto(True, self.window_icon)  # Main window icon (for Windows OS)
+        self.iconphoto(True, self.window_icon)  # Main window icon (for Windows OS)
         self.create_menubar()
 
         # Main window
@@ -132,8 +132,8 @@ class TaskTracker:
     def create_menubar(self):
         """Creates the main window's menubar."""
 
-        menubar = tk.Menu(self.root, tearoff=False)
-        self.root.config(menu=menubar)
+        menubar = tk.Menu(self, tearoff=False)
+        self.config(menu=menubar)
 
         # File menu and sub-menus
         file_menu = tk.Menu(menubar, tearoff=False)
@@ -253,7 +253,7 @@ class TaskTracker:
             # Timer
             time = timestamp(self.counter)
             self.timer.set(time)
-            self.root.after(1000, self.update)
+            self.after(1000, self.update)
             self.counter += 1
 
     def execute_timer(self, event=None):
@@ -329,8 +329,8 @@ class TaskTracker:
         previous_state = list(name for i in raw_state for name in i)
 
         # Default window placement -- center screen
-        center_x = self.root.winfo_screenwidth() // 2
-        center_y = self.root.winfo_screenheight() // 2
+        center_x = self.winfo_screenwidth() // 2
+        center_y = self.winfo_screenheight() // 2
         x = center_x - (window_width // 2)
         y = center_y - (window_height // 2)
 
@@ -348,7 +348,7 @@ class TaskTracker:
         This method commits the window's current `x` and `y` coordinates,
         as well as the task on its display.
         """
-        x, y = self.root.geometry().split("+")[1:]
+        x, y = self.geometry().split("+")[1:]
         current_entry = self.task.get().strip()
         window_state = [x, y, current_entry]
 
@@ -389,7 +389,7 @@ class TaskTracker:
             total_time_per_task[task.strip()] = float(data[0])
 
         self.statistics_window = StatisticsWindow(
-            self.root,
+            self,
             total_time_per_task,
         )
         self.statistics_window.focus_set()
@@ -444,7 +444,7 @@ class TaskTracker:
             self.execute_timer()
 
         self.db.close_database()
-        self.root.destroy()
+        self.destroy()
 
     # HELPER METHODS
 

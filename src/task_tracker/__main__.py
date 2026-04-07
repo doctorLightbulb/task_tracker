@@ -30,9 +30,8 @@ def main():
         sys.exit(1)
 
     # Main program
-    root = tk.Tk()
-    TaskTracker(root, database, icons)
-    root.mainloop()
+    app = TaskTracker(database, icons)
+    app.mainloop()
 
 
 if __name__ == "__main__":
