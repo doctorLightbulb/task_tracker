@@ -85,6 +85,7 @@ class TaskTracker(tk.Tk):
         """Adds bindings to menu items and buttons."""
         self.bind("<Alt-i>", self.import_tasks)
         self.bind("<Alt-e>", self.export_tasks)
+        self.bind("<Alt-s>", self.show_statistics_window)
         self.bind("<Control-e>", self.edit_entry)
         self.bind("<Control-a>", self.add_entry)
         self.bind("<Control-d>", self.delete_entry)
@@ -381,7 +382,7 @@ class TaskTracker(tk.Tk):
     # MENUBAR COMMANDS
 
     # View
-    def show_statistics_window(self):
+    def show_statistics_window(self, event=None):
         """Displays the statistics window."""
         total_time_per_task = dict()
         for task in sorted(self.tasks):
