@@ -50,10 +50,10 @@ FETCH_TASK = """
 FETCH_DAYS_TIME = """
     SELECT SUM(elapsed)
     FROM tasks
-    WHERE task = '{}' AND started LIKE "%{}%"
+    WHERE task = '{}' AND DATE(started) = DATE('now', 'localtime')
 """
 
-FETCH_ELAPSED_TIME = """
+FETCH_TOTAL_TIME = """
     SELECT SUM(elapsed)
     FROM tasks
     WHERE task = '{}'
