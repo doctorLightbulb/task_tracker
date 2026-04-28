@@ -14,9 +14,9 @@ from task_tracker.database import (
     COMMIT_TASK_QUERY,
     FETCH_DATA,
     FETCH_DAYS_TIME,
-    FETCH_ELAPSED_TIME,
     FETCH_STATE,
     FETCH_TASK,
+    FETCH_TOTAL_TIME,
     UPDATE_STATE_QUERY,
     Database,
 )
@@ -66,8 +66,8 @@ class TaskTracker(tk.Tk):
         # Window size and placement:
         window_width = 304
         window_height = 208
-        x, y = self.set_window_state(window_width, window_height)
-        self.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        self.x, self.y = self.set_window_state(window_width, window_height)
+        self.geometry(f"{window_width}x{window_height}+{self.x}+{self.y}")
 
         # Other:
         self.icons = icons
@@ -365,7 +365,7 @@ class TaskTracker(tk.Tk):
         Assigns the default time `(00:00:00)` otherwise.
         """
         raw_seconds = self.db.fetchone(
-            FETCH_DAYS_TIME.format(self.task.get(), self.date),
+            FETCH_DAYS_TIME.format(self.task.get()),
         )
         # Assign the default time:
         if isinstance(None, type(raw_seconds[0])):
@@ -384,14 +384,26 @@ class TaskTracker(tk.Tk):
     # View
     def show_statistics_window(self, event=None):
         """Displays the statistics window."""
-        total_time_per_task = dict()
-        for task in sorted(self.tasks):
-            data = self.db.fetchone(FETCH_ELAPSED_TIME.format(task))
-            total_time_per_task[task.strip()] = float(data[0])
+        queries = {
+            "daily": FETCH_DAYS_TIME,
+            "weekly": FETCH_TOTAL_TIME,
+            "total": FETCH_TOTAL_TIME,
+        }
+        task_data = dict()
+        for section in queries.keys():
+            section_data = dict()
+            for task in sorted(self.tasks):
+                try:
+                    data = self.db.fetchone(queries[section].format(task))
+                    section_data[task.strip()] = float(data[0])
+                    task_data[section] = section_data
+                except TypeError as e:
+                    continue
 
         self.statistics_window = StatisticsWindow(
             self,
-            total_time_per_task,
+            task_data,
+            (self.x, self.y),
         )
         self.statistics_window.focus_set()
         self.statistics_window.grab_set()
