@@ -2,6 +2,17 @@
 @REM into an executable on Windows.
 @REM July 2, 2025.
 
+@echo off
+setlocal
+
+set "VENV_PATH=.venv\Scripts\activate.bat"
+
+:: Ensure virtual environment is activated:
+if not defined VIRTUAL_ENV (
+    echo Activating virtual environment...
+    call "%VENV_PATH%"
+)
+
 
 pyinstaller cli.py ^
     --noconsole ^
@@ -13,3 +24,5 @@ pyinstaller cli.py ^
     --log-level WARN ^
     --noconfirm ^
     --clean
+
+endlocal
